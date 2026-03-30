@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Countdown</title>
+<style>
+  @font-face {
+    font-family: Geomanist;
+    font-weight: 900;
+    src: url(./fonts/Geomanist-Black.otf);
+  }
+  @font-face {
+    font-family: Intro;
+    font-weight: 100;
+    src:url(fonts/Intro\ Light.otf)
+  }
+  @font-face {
+    font-family: Intro;
+    font-weight: 700;
+    src: url(fonts/Intro\ Bold.otf);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: #1e1e2e;
+    --accent: #e8ff47;
+    --accent2: #ff4785;
+    --text: #f0f0f0;
+    --muted: #555570;
+    --digit-size: clamp(72px, 14vw, 160px);
+  }
+
+  html, body {
+    height: 100%;
+    width: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Intro', sans-serif;
+    overflow: hidden;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.5;
+  }
+
+  /* Gradient orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.12;
+    pointer-events: none;
+  }
+  .orb-1 { width: 600px; height: 600px; background: var(--accent); top: -200px; right: -100px; }
+  .orb-2 { width: 500px; height: 500px; background: var(--accent2); bottom: -150px; left: -100px; }
+
+  /* Main layout */
+  .page {
+    position: relative;
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    padding: 32px 48px;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .logo {
+    font-size: 2.5vw;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+  }
+
+  .target-display {
+    text-align: right;
+  }
+
+  .target-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .target-date {
+    font-size: 13px;
+    color: var(--text);
+    letter-spacing: 0.05em;
+  }
+
+  /* Center countdown */
+  .center {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .countdown-row {
+    display: flex;
+    align-items: flex-end;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.4s;
+  }
+
+  .unit-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+  }
+
+  .digits {
+    font-family: 'Geomanist';
+    font-size: var(--digit-size);
+    line-height: 0.9;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    position: relative;
+    transition: color 0.1s;
+    min-width: 2ch;
+    text-align: center;
+  }
+
+  .digits.tick {
+    color: var(--accent);
+  }
+
+  .unit-label {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .separator {
+    font-family: 'Geomanist';
+    font-size: calc(var(--digit-size) * 0.5);
+    line-height: 1;
+    margin-bottom: 1lh;
+    user-select: none;
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.1; }
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    width: clamp(280px, 70vw, 800px);
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.7s;
+  }
+
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .progress-track {
+    height: 2px;
+    background: var(--border);
+    position: relative;
+    overflow: visible;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    transition: width 1s linear;
+    position: relative;
+  }
+
+  .progress-bar::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: -3px;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--accent);
+  }
+
+  /* Finished state */
+  .finished-msg {
+    display: none;
+    font-family: 'Dancing Script', cursive;
+    font-size: clamp(40px, 8vw, 90px);
+    color: var(--accent);
+    text-align: center;
+    letter-spacing: 0.05em;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(0.97); }
+  }
+
+  /* Live dot */
+  .live-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--accent2);
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: blink 1s step-end infinite;
+    vertical-align: middle;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Negative / expired */
+  .expired .digits { color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="page">
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">COUNTDOWN</div>
+    <div class="target-display">
+      <span class="target-label">Ziel</span>
+      <span class="target-date" id="targetLabel">—</span>
+    </div>
+  </header>
+
+  <!-- Center -->
+  <div class="center">
+    <div id="finishedMsg" class="finished-msg">Zeit abgelaufen!</div>
+
+    <div class="countdown-row" id="countdownRow">
+      <div class="unit-block">
+        <div class="digits" id="days">000</div>
+        <div class="unit-label">Tage</div>
+      </div>
+      <div class="separator">:</div>
+      <div class="unit-block">
+        <div class="digits" id="hours">00</div>
+        <div class="unit-label">Stunden</div>
+      </div>
+      <div class="separator">:</div>
+      <div class="unit-block">
+        <div class="digits" id="minutes">00</div>
+        <div class="unit-label">Min</div>
+      </div>
+      <div class="separator">:</div>
+      <div class="unit-block">
+        <div class="digits" id="seconds">00</div>
+        <div class="unit-label">Sek</div>
+      </div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-meta">
+        <span><span class="live-dot"></span>Live</span>
+        <span id="pctLabel">—</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<script>
+  let targetTime = null;
+  let startTime = null;
+  let interval = null;
+
+  // Read query parameters: ?titel=...&datum=2026-04-02T17:05
+  const params = new URLSearchParams(window.location.search);
+  const paramDatum = params.get('datum');
+  const paramTitel = params.get('titel');
+
+  const defaultTarget = new Date('2026-04-02T17:05:00');
+  const defaultTitel  = 'Countdown bis zum Urlaub';
+
+  const targetDate = paramDatum ? new Date(paramDatum) : defaultTarget;
+  const targetTitel = paramTitel ? decodeURIComponent(paramTitel) : defaultTitel;
+
+  setTarget(isNaN(targetDate) ? defaultTarget : targetDate, targetTitel);
+
+  function toLocalIso(date) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  function setTarget(date, label) {
+    targetTime = date;
+    startTime = new Date();
+    eventTitle = label || 'Countdown';
+    document.querySelector('.logo').textContent = eventTitle.toUpperCase();
+    document.getElementById('targetLabel').textContent = date.toLocaleString('de-CH', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+
+    clearInterval(interval);
+    document.getElementById('finishedMsg').style.display = 'none';
+    document.getElementById('countdownRow').style.display = 'flex';
+    tick();
+    interval = setInterval(tick, 1000);
+  }
+
+
+  function tick() {
+    const now = new Date();
+    const diff = targetTime - now;
+
+    if (diff <= 0) {
+      clearInterval(interval);
+      document.getElementById('countdownRow').style.display = 'none';
+      document.getElementById('finishedMsg').style.display = 'block';
+      document.getElementById('progressBar').style.width = '100%';
+      document.getElementById('pctLabel').textContent = '100%';
+      return;
+    }
+
+    const totalSecs = Math.floor(diff / 1000);
+    const d = Math.floor(totalSecs / 86400);
+    const h = Math.floor((totalSecs % 86400) / 3600);
+    const m = Math.floor((totalSecs % 3600) / 60);
+    const s = totalSecs % 60;
+
+    setDigit('days',    String(d).padStart(3, '0'));
+    setDigit('hours',   String(h).padStart(2, '0'));
+    setDigit('minutes', String(m).padStart(2, '0'));
+    setDigit('seconds', String(s).padStart(2, '0'));
+
+    // Progress
+    const totalDuration = targetTime - startTime;
+    const elapsed = now - startTime;
+    const pct = Math.min(100, (elapsed / totalDuration) * 100);
+    document.getElementById('progressBar').style.width = pct.toFixed(3) + '%';
+    document.getElementById('pctLabel').textContent = (100 - pct).toFixed(2) + '% verbleibend';
+  }
+
+  function setDigit(id, val) {
+    const el = document.getElementById(id);
+    if (el.textContent !== val) {
+      el.textContent = val;
+      el.classList.remove('tick');
+      void el.offsetWidth;
+      el.classList.add('tick');
+      setTimeout(() => el.classList.remove('tick'), 100);
+    }
+  }
+
+
+</script>
+</body>
+</html>
