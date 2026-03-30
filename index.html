@@ -8,17 +8,17 @@
   @font-face {
     font-family: Geomanist;
     font-weight: 900;
-    src: url(./fonts/Geomanist-Black.otf);
+    src: url(./fonts/geomanist-black-webfont.woff2);
   }
   @font-face {
     font-family: Intro;
     font-weight: 100;
-    src:url(fonts/Intro\ Light.otf)
+    src:url(fonts/Intro-light.woff2)
   }
   @font-face {
     font-family: Intro;
     font-weight: 700;
-    src: url(fonts/Intro\ Bold.otf);
+    src: url(fonts/Intro-bold.woff2);
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -158,9 +158,9 @@
 
   .separator {
     font-family: 'Geomanist';
-    font-size: calc(var(--digit-size) * 0.5);
-    line-height: 1;
-    margin-bottom: 1lh;
+    font-size: calc(var(--digit-size) * 0.75);
+    /* line-height: 1; */
+    margin-bottom: 0.1lh;
     user-select: none;
     animation: blink 1s step-end infinite;
   }
@@ -274,7 +274,7 @@
         <div class="digits" id="days">000</div>
         <div class="unit-label">Tage</div>
       </div>
-      <div class="separator">:</div>
+      <div class="separator">/</div>
       <div class="unit-block">
         <div class="digits" id="hours">00</div>
         <div class="unit-label">Stunden</div>
